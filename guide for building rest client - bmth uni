@@ -1,0 +1,127 @@
+I will leave the PoM setup with all required dependencies - feel free to give a whirlwind tour
+
+1. start with spring boot class:
+
+public class CircuitBreakerReadingApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(CircuitBreakerReadingApplication.class, args);
+    }
+}
+
+2. Setup test class
+@RunWith(SpringRunner.class)
+@SpringBootTest(webEnvironment= SpringBootTest.WebEnvironment.RANDOM_PORT)
+public class CircuitBreakerReadingApplicationTests {
+
+    private MockRestServiceServer server;
+
+    @Autowired
+    private TestRestTemplate testRestTemplate;
+
+    @Autowired
+    private RestTemplate rest;
+
+    @Before
+    public void setup() {
+        this.server = MockRestServiceServer.createServer(rest);
+    }
+
+    @After
+    public void teardown() {
+        this.server = null;
+    }
+
+3. Add happy path rest call test (with mock of the call to the bookstore service)
+
+    @Test
+    public void toReadTest() {
+        this.server.expect(requestTo("http://localhost:8090/recommended"))
+                .andExpect(method(HttpMethod.GET)).
+                andRespond(withSuccess("books", MediaType.TEXT_PLAIN));
+        String books = testRestTemplate.getForObject("/to-read", String.class);
+        assertThat(books).isEqualTo("Please read: books");
+    }
+	
+4. Add code to pass the test - specifically a restcontroller class 
+
+@RestController
+public class BookService {
+
+  private final RestTemplate restTemplate;
+  @Value("${bookstore.server}")
+  String bookstoreServer;
+
+  public BookService(RestTemplate rest) {
+    this.restTemplate = rest;
+  }
+
+  @RequestMapping("/to-read")
+  public String readingList() {
+    URI uri = URI.create(bookstoreServer + "/recommended");
+
+    return "Please read: " + this.restTemplate.getForObject(uri, String.class);
+  }
+
+5. Add failing test - unhandled error on mocked ReST call
+
+    @Test
+    public void toReadFailureTest() {
+        this.server.expect(requestTo("http://localhost:8090/recommended")).
+                andExpect(method(HttpMethod.GET)).andRespond(withServerError());
+        String books = testRestTemplate.getForObject("/to-read", String.class);
+        assertThat(books).isEqualTo("Please read: Cloud Native Java (O'Reilly) - returned as a fallbackMethod via Hystrix because the Bookstore service is not stable");
+    }
+	
+6. Add Hystrix to pass failing test
+  @HystrixCommand(fallbackMethod = "reliable")
+  
+  ....
+  
+  public String reliable() {
+    return "Please read: Cloud Native Java (O'Reilly) - returned as a fallbackMethod via Hystrix because the Bookstore service is not stable";
+  }
+
+7. prove test now works by executing the fallback method
+
+8. add test for short delay which will fail as there is no hystrix config as yet for the timeout value (so it will straight execute the fallback)
+
+    @Test
+    public void toReadShortDelayTest() {
+        this.server.expect(requestTo("http://localhost:8090/recommended")).
+                andExpect(method(HttpMethod.GET)).andRespond(request -> {
+            try {
+                Thread.sleep(TimeUnit.SECONDS.toMillis(1));
+            } catch (InterruptedException ignored) {}
+            return new MockClientHttpResponse("book".getBytes(), HttpStatus.OK);
+        });
+        String books = testRestTemplate.getForObject("/to-read", String.class);
+        assertThat(books).isEqualTo("Please read: book");
+    }
+
+9. add config line to properties
+
+	hystrix.command.default.execution.isolation.thread.timeoutInMilliseconds=5000
+
+10. rerun above test and prove it passes
+
+11. add test with long timeout - this will pass as well now, returning the fallback method.  
+
+	NB - interesting to note whilst the timeout is 10 seconds, because of hystrix config the test finishes in 5 seconds
+
+    @Test
+    public void toReadDelayTest() {
+        this.server.expect(requestTo("http://localhost:8090/recommended")).
+                andExpect(method(HttpMethod.GET)).andRespond(request -> {
+            try {
+                Thread.sleep(TimeUnit.SECONDS.toMillis(10000));
+            } catch (InterruptedException ignored) {}
+            return new MockClientHttpResponse("book".getBytes(), HttpStatus.OK);
+        });
+        String books = testRestTemplate.getForObject("/to-read", String.class);
+        assertThat(books).isEqualTo("Please read: Cloud Native Java (O'Reilly) - returned as a fallbackMethod via Hystrix because the Bookstore service is not stable");
+    }
+	
+12. there we have it - a shiny new TDD built rest service
+
+13. my assistant with the luscious beard will now demonstrate hystrix working from a user perspective
