@@ -8,20 +8,19 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
-@EnableCircuitBreaker // required for test t2
+@EnableCircuitBreaker
 @SpringBootApplication
 public class CircuitBreakerReadingApplication {
 
-    public static void main(final String[] args) {
-        SpringApplication.run(CircuitBreakerReadingApplication.class, args);
+    @Configuration
+    class Config {
+        @Bean
+        public RestTemplate rest(final RestTemplateBuilder builder) {
+            return builder.build();
+        }
     }
 
-    // required for t1 test to run successfully
-    @Configuration
-    public class Config {
-        @Bean
-        public RestTemplate restTemplate() {
-            return new RestTemplateBuilder().build();
-        }
+    public static void main(final String[] args) {
+        SpringApplication.run(CircuitBreakerReadingApplication.class, args);
     }
 }
