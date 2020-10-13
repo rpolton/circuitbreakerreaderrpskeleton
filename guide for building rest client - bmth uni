@@ -140,7 +140,7 @@ and add
 9. Prove test now works by executing the fallback method
 
 10. Add test for short delay which will fail as there is no hystrix config yet for the timeout value (so it will execute the fallback
-because the default timeout is c.3/4 sec)
+because the default timeout is between 1 and 2 seconds)
 
     @Test
     void toReadShortDelay() {
@@ -148,7 +148,7 @@ because the default timeout is c.3/4 sec)
             .andExpect(method(HttpMethod.GET))
             .andRespond(request -> {
                 try {
-                    Thread.sleep(TimeUnit.SECONDS.toMillis(1));
+                    Thread.sleep(TimeUnit.SECONDS.toMillis(2));
                 } catch( final InterruptedException ignored) {
 
                 }
