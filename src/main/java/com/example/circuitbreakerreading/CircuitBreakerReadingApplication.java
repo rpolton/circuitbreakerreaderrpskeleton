@@ -11,6 +11,9 @@ import org.springframework.web.client.RestTemplate;
 @EnableCircuitBreaker
 @SpringBootApplication
 public class CircuitBreakerReadingApplication {
+    public static void main(final String[] args) {
+        SpringApplication.run(CircuitBreakerReadingApplication.class, args);
+    }
 
     @Configuration
     class Config {
@@ -18,9 +21,5 @@ public class CircuitBreakerReadingApplication {
         public RestTemplate rest(final RestTemplateBuilder builder) {
             return builder.build();
         }
-    }
-
-    public static void main(final String[] args) {
-        SpringApplication.run(CircuitBreakerReadingApplication.class, args);
     }
 }

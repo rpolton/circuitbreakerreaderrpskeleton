@@ -24,7 +24,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 @ExtendWith(SpringExtension.class)
-@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CircuitBreakerReadingApplicationTests {
 
     @Autowired
@@ -63,7 +63,8 @@ class CircuitBreakerReadingApplicationTests {
                 .andRespond(withServerError());
         final String books = testRestTemplate.getForObject("/to-read", String.class);
         remoteServer.verify();
-        assertThat(books).isEqualTo("Please read: Cloud Native Java (O'Reilly) - returned as a fallbackMethod via Hystrix because the Bookstore service is not stable");
+        assertThat(books).isEqualTo("Please read: Cloud Native Java (O'Reilly) - " +
+                "returned as a fallbackMethod via Hystrix because the Bookstore service is not stable");
     }
 
     @Test
@@ -72,8 +73,8 @@ class CircuitBreakerReadingApplicationTests {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(request -> {
                     try {
-                        Thread.sleep(TimeUnit.SECONDS.toMillis(1));
-                    } catch( final InterruptedException ignored) {
+                        Thread.sleep(TimeUnit.SECONDS.toMillis(2));
+                    } catch(final InterruptedException ignored) {
 
                     }
                     return new MockClientHttpResponse("Beano Annual 2020".getBytes(), HttpStatus.OK);
@@ -97,7 +98,9 @@ class CircuitBreakerReadingApplicationTests {
                 });
         final String books = testRestTemplate.getForObject("/to-read", String.class);
         remoteServer.verify();
-        assertThat(books).isEqualTo("Please read: Cloud Native Java (O'Reilly) - returned as a fallbackMethod via Hystrix because the Bookstore service is not stable");
+//        assertThat(books).isEqualTo("Please read: Beano Annual 2020");
+        assertThat(books).isEqualTo("Please read: Cloud Native Java (O'Reilly) - " +
+                "returned as a fallbackMethod via Hystrix because the Bookstore service is not stable");
     }
 
     @AfterEach

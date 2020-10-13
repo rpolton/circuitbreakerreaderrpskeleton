@@ -11,22 +11,23 @@ import java.net.URI;
 @RestController
 public class BookService {
     private final RestTemplate restTemplate;
-    private final String bookstoreServer;
+    private final String bookStoreServer;
 
-    public BookService(@Value("${bookstore.server}") final String bookstoreServer, final RestTemplate restTemplate) {
-        this.bookstoreServer = bookstoreServer;
+    public BookService(final RestTemplate restTemplate, @Value("${bookstore.server}") final String bookStoreServer) {
         this.restTemplate = restTemplate;
+        this.bookStoreServer = bookStoreServer;
     }
 
     @HystrixCommand(fallbackMethod="reliable")
     @RequestMapping("/to-read")
     public String readingList() {
-        final URI uri = URI.create(bookstoreServer + "/recommended");
+        final URI uri = URI.create(bookStoreServer + "/recommended");
 
         return "Please read: " + restTemplate.getForObject(uri, String.class);
     }
 
     private String reliable() {
-        return "Please read: Cloud Native Java (O'Reilly) - returned as a fallbackMethod via Hystrix because the Bookstore service is not stable";
+        return "Please read: Cloud Native Java (O'Reilly) - " +
+                "returned as a fallbackMethod via Hystrix because the Bookstore service is not stable";
     }
 }
